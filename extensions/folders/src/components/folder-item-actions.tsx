@@ -17,10 +17,7 @@ interface FolderItemActionsProps {
   onFolderChange?: () => void
 }
 
-export const FolderItemActions = memo(function FolderItemActions({
-  folder,
-  onFolderChange,
-}: FolderItemActionsProps) {
+export const FolderItemActions = memo(function FolderItemActions({ folder, onFolderChange }: FolderItemActionsProps) {
   const { applications } = useApplicationsData()
   const { folders: allFolders, handleSave: defaultHandleSave, handleDelete } = useFoldersData()
 
@@ -151,9 +148,7 @@ export const FolderItemActions = memo(function FolderItemActions({
           title="Edit Folder"
           icon={Icon.Pencil}
           shortcut={{ modifiers: ["cmd"], key: "e" }}
-          target={
-            <FolderEditForm folder={folder} onSave={handleSave} navigateToFolderAfterSave={false} />
-          }
+          target={<FolderEditForm folder={folder} onSave={handleSave} navigateToFolderAfterSave={false} />}
         />
         <Action.Push
           title="Create New Folder"
