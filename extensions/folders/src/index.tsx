@@ -1,45 +1,45 @@
-import { Action, ActionPanel, Icon, List, getPreferenceValues, LaunchProps } from "@raycast/api"
-import React, { useCallback } from "react"
-import FolderContentsView from "./folder-contents"
-import FolderEditForm from "./folder-edit-form"
-import ImportFoldersForm from "./components/import-folders-form"
-import { generateFolderKeywords, getFolderIcon, pluralize } from "./utils"
-import { FolderItemActions } from "./components/folder-item-actions"
-import { useFolderPreviewDetail } from "./components/folder-preview-detail"
-import { useFoldersData, useApplicationsData } from "./hooks"
-import { NO_FOLDERS_VIEW } from "./constants"
+import { Action, ActionPanel, Icon, List, getPreferenceValues, LaunchProps } from "@raycast/api";
+import React, { useCallback } from "react";
+import FolderContentsView from "./folder-contents";
+import FolderEditForm from "./folder-edit-form";
+import ImportFoldersForm from "./components/import-folders-form";
+import { generateFolderKeywords, getFolderIcon, pluralize } from "./utils";
+import { FolderItemActions } from "./components/folder-item-actions";
+import { useFolderPreviewDetail } from "./components/folder-preview-detail";
+import { useFoldersData, useApplicationsData } from "./hooks";
+import { NO_FOLDERS_VIEW } from "./constants";
 
 interface LaunchContext {
-  folderId?: string
-  folderName?: string
+  folderId?: string;
+  folderName?: string;
 }
 
 interface Preferences {
-  showPreviewPane: boolean
+  showPreviewPane: boolean;
 }
 
 export default function Command(props: LaunchProps<{ launchContext?: LaunchContext }>) {
   // Handle deeplink context - render folder contents directly if opened via quicklink
-  const context = props.launchContext as LaunchContext | undefined
+  const context = props.launchContext as LaunchContext | undefined;
   if (context?.folderId) {
-    return <FolderContentsView folderId={context.folderId} folderName={context.folderName || "Folder"} />
+    return <FolderContentsView folderId={context.folderId} folderName={context.folderName || "Folder"} />;
   }
 
-  const { showPreviewPane = false } = getPreferenceValues<Preferences>()
+  const { showPreviewPane = false } = getPreferenceValues<Preferences>();
   const {
     folders,
     topLevelFolders,
     nestedFolders,
     isLoading: isLoadingFolders,
     handleSave,
-  } = useFoldersData({ enablePolling: true })
-  const { applications, isLoading: isLoadingApps } = useApplicationsData()
+  } = useFoldersData({ enablePolling: true });
+  const { applications, isLoading: isLoadingApps } = useApplicationsData();
 
-  const isLoading = isLoadingFolders || isLoadingApps
+  const isLoading = isLoadingFolders || isLoadingApps;
 
-  const renderDetail = useFolderPreviewDetail(showPreviewPane, applications, folders)
+  const renderDetail = useFolderPreviewDetail(showPreviewPane, applications, folders);
 
-  const isEmpty = folders.length === 0 && !isLoading
+  const isEmpty = folders.length === 0 && !isLoading;
 
   // Create folder action - reused in empty view and folder items
   const CreateFolderAction = useCallback(
@@ -51,8 +51,8 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         target={<FolderEditForm onSave={handleSave} navigateToFolderAfterSave={false} />}
       />
     ),
-    [handleSave]
-  )
+    [handleSave],
+  );
 
   const renderFolderItem = useCallback(
     (folder: (typeof folders)[0]) => (
@@ -67,8 +67,8 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         detail={renderDetail(folder)}
       />
     ),
-    [showPreviewPane, renderDetail, handleSave]
-  )
+    [showPreviewPane, renderDetail, handleSave],
+  );
 
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search folders..." filtering isShowingDetail={showPreviewPane}>
@@ -101,5 +101,5 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         </>
       )}
     </List>
-  )
+  );
 }

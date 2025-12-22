@@ -1,31 +1,31 @@
-import { Action, ActionPanel, Icon, showToast, Toast, confirmAlert, Alert } from "@raycast/api"
-import { createDeeplink } from "@raycast/utils"
-import React, { useMemo, useCallback, memo } from "react"
-import { Folder } from "../types"
-import FolderContentsView from "../folder-contents"
-import FolderEditForm from "../folder-edit-form"
-import ImportFoldersForm from "./import-folders-form"
-import { pluralize, getFolderIconPlain, openAllApplications, openAllWebsites } from "../utils"
-import { useFoldersData, useApplicationsData, useCopyUrls } from "../hooks"
-import { updateFolder } from "../storage"
-import { exportFolder, exportAllFolders } from "../backup"
-import { filterApplications, filterWebsites } from "../form-utils"
+import { Action, ActionPanel, Icon, showToast, Toast, confirmAlert, Alert } from "@raycast/api";
+import { createDeeplink } from "@raycast/utils";
+import React, { useMemo, useCallback, memo } from "react";
+import { Folder } from "../types";
+import FolderContentsView from "../folder-contents";
+import FolderEditForm from "../folder-edit-form";
+import ImportFoldersForm from "./import-folders-form";
+import { pluralize, getFolderIconPlain, openAllApplications, openAllWebsites } from "../utils";
+import { useFoldersData, useApplicationsData, useCopyUrls } from "../hooks";
+import { updateFolder } from "../storage";
+import { exportFolder, exportAllFolders } from "../backup";
+import { filterApplications, filterWebsites } from "../form-utils";
 
 interface FolderItemActionsProps {
-  folder: Folder
+  folder: Folder;
   /** Optional callback to sync parent component after changes */
-  onFolderChange?: () => void
+  onFolderChange?: () => void;
 }
 
 export const FolderItemActions = memo(function FolderItemActions({ folder, onFolderChange }: FolderItemActionsProps) {
-  const { applications } = useApplicationsData()
-  const { folders: allFolders, handleSave: defaultHandleSave, handleDelete } = useFoldersData()
+  const { applications } = useApplicationsData();
+  const { folders: allFolders, handleSave: defaultHandleSave, handleDelete } = useFoldersData();
 
   // Use provided callback or default handleSave
-  const handleSave = onFolderChange || defaultHandleSave
+  const handleSave = onFolderChange || defaultHandleSave;
 
   // URL copying functionality (reusable hook)
-  const { hasUrls, copyAsMarkdown, copyAsList } = useCopyUrls(folder, allFolders)
+  const { hasUrls, copyAsMarkdown, copyAsList } = useCopyUrls(folder, allFolders);
 
   const deeplink = useMemo(
     () =>
@@ -33,41 +33,41 @@ export const FolderItemActions = memo(function FolderItemActions({ folder, onFol
         command: "index",
         context: { folderId: folder.id, folderName: folder.name },
       }),
-    [folder.id, folder.name]
-  )
+    [folder.id, folder.name],
+  );
 
   // Get the folder's custom icon for the quicklink (plain Icon, without color tinting)
-  const folderIcon = useMemo(() => getFolderIconPlain(folder.icon), [folder.icon])
+  const folderIcon = useMemo(() => getFolderIconPlain(folder.icon), [folder.icon]);
 
   // Filter items by type once for efficiency
   const { appItems, websiteItems, hasApps, hasWebsites } = useMemo(() => {
-    const apps = filterApplications(folder.items)
-    const websites = filterWebsites(folder.items)
+    const apps = filterApplications(folder.items);
+    const websites = filterWebsites(folder.items);
     return {
       appItems: apps,
       websiteItems: websites,
       hasApps: apps.length > 0,
       hasWebsites: websites.length > 0,
-    }
-  }, [folder.items])
+    };
+  }, [folder.items]);
 
   const handleOpenAllApps = useCallback(
     () => openAllApplications(appItems, folder.name, applications),
-    [appItems, folder.name, applications]
-  )
+    [appItems, folder.name, applications],
+  );
 
   const handleOpenAllWebsites = useCallback(
     () => openAllWebsites(websiteItems, folder.name),
-    [websiteItems, folder.name]
-  )
+    [websiteItems, folder.name],
+  );
 
   const handleEmptyFolder = useCallback(async () => {
     if (folder.items.length === 0) {
       await showToast({
         style: Toast.Style.Success,
         title: "Folder is already empty",
-      })
-      return
+      });
+      return;
     }
 
     const confirmed = await confirmAlert({
@@ -77,19 +77,19 @@ export const FolderItemActions = memo(function FolderItemActions({ folder, onFol
         title: "Empty Folder",
         style: Alert.ActionStyle.Destructive,
       },
-    })
+    });
 
-    if (!confirmed) return
+    if (!confirmed) return;
 
-    await updateFolder(folder.id, { items: [] })
-    await handleSave()
+    await updateFolder(folder.id, { items: [] });
+    await handleSave();
 
     await showToast({
       style: Toast.Style.Success,
       title: "Folder emptied",
       message: `Removed ${folder.items.length} ${pluralize(folder.items.length, "item")}`,
-    })
-  }, [folder.id, folder.name, folder.items.length, handleSave])
+    });
+  }, [folder.id, folder.name, folder.items.length, handleSave]);
 
   return (
     <ActionPanel>
@@ -210,5 +210,5 @@ export const FolderItemActions = memo(function FolderItemActions({ folder, onFol
         />
       </ActionPanel.Section>
     </ActionPanel>
-  )
-})
+  );
+});

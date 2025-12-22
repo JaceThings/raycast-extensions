@@ -1,8 +1,20 @@
-import { Action, ActionPanel, Icon, List, Grid, open, useNavigation, confirmAlert, Alert } from "@raycast/api"
-import { useCachedPromise } from "@raycast/utils"
-import React, { useMemo, useCallback, memo } from "react"
-import { getFolderById, recordFolderAccess, recordItemAccess, invalidateFoldersCache, updateFolder } from "./storage"
-import { FolderItem, Folder } from "./types"
+import {
+  Action,
+  ActionPanel,
+  Icon,
+  List,
+  Grid,
+  open,
+  useNavigation,
+  confirmAlert,
+  Alert,
+  showToast,
+  Toast,
+} from "@raycast/api";
+import { useCachedPromise } from "@raycast/utils";
+import React, { useMemo, useCallback, memo } from "react";
+import { getFolderById, recordFolderAccess, recordItemAccess, invalidateFoldersCache, updateFolder } from "./storage";
+import { FolderItem, Folder } from "./types";
 import {
   getItemDisplayName,
   sortFolderItems,
@@ -12,29 +24,32 @@ import {
   findDuplicateItems,
   openAllApplications,
   openAllWebsites,
-  toastSuccess,
-  toastFailure,
-  toastLoading,
-} from "./utils"
-import { useApplicationsData, useFoldersData, useFolderContentsPreferences, useRunningApps, useCopyUrls } from "./hooks"
-import { filterApplications, filterWebsites } from "./form-utils"
-import { fetchAndCacheFavicon } from "./favicon"
-import AddItemsForm from "./components/add-items-form"
-import WebsiteEditForm from "./components/website-edit-form"
-import MoveToFolderForm from "./components/move-to-folder-form"
-import FolderEditForm from "./folder-edit-form"
-import { FolderPreviewDetail } from "./components/folder-preview-detail"
-import { EMPTY_FOLDER_VIEW, FOLDER_NOT_FOUND_VIEW } from "./constants"
+} from "./utils";
+import {
+  useApplicationsData,
+  useFoldersData,
+  useFolderContentsPreferences,
+  useRunningApps,
+  useCopyUrls,
+} from "./hooks";
+import { filterApplications, filterWebsites } from "./form-utils";
+import { fetchAndCacheFavicon } from "./favicon";
+import AddItemsForm from "./components/add-items-form";
+import WebsiteEditForm from "./components/website-edit-form";
+import MoveToFolderForm from "./components/move-to-folder-form";
+import FolderEditForm from "./folder-edit-form";
+import { FolderPreviewDetail } from "./components/folder-preview-detail";
+import { EMPTY_FOLDER_VIEW, FOLDER_NOT_FOUND_VIEW } from "./constants";
 
 interface FolderContentsViewProps {
-  folderId: string
-  folderName: string
-  parentPath?: string // Breadcrumb path for nested folders
+  folderId: string;
+  folderName: string;
+  parentPath?: string; // Breadcrumb path for nested folders
 }
 
 // Wrapper to avoid circular imports
 function FolderContentsViewWrapper({ folderId, folderName, parentPath }: FolderContentsViewProps) {
-  return <FolderContentsView folderId={folderId} folderName={folderName} parentPath={parentPath} />
+  return <FolderContentsView folderId={folderId} folderName={folderName} parentPath={parentPath} />;
 }
 
 // Nested folder action with access tracking - memoized for performance
@@ -46,24 +61,24 @@ const OpenNestedFolderAction = memo(function OpenNestedFolderAction({
   currentPath,
   onAccessRecorded,
 }: {
-  folderId: string
-  itemId: string
-  itemFolderId: string
-  itemName: string
-  currentPath: string
-  onAccessRecorded?: () => void
+  folderId: string;
+  itemId: string;
+  itemFolderId: string;
+  itemName: string;
+  currentPath: string;
+  onAccessRecorded?: () => void;
 }) {
-  const { push } = useNavigation()
+  const { push } = useNavigation();
 
   const handleOpen = useCallback(async () => {
-    await recordItemAccess(folderId, itemId)
-    onAccessRecorded?.()
-    const newPath = `${currentPath} → ${itemName}`
-    push(<FolderContentsViewWrapper folderId={itemFolderId} folderName={itemName} parentPath={newPath} />)
-  }, [folderId, itemId, itemFolderId, itemName, currentPath, onAccessRecorded, push])
+    await recordItemAccess(folderId, itemId);
+    onAccessRecorded?.();
+    const newPath = `${currentPath} → ${itemName}`;
+    push(<FolderContentsViewWrapper folderId={itemFolderId} folderName={itemName} parentPath={newPath} />);
+  }, [folderId, itemId, itemFolderId, itemName, currentPath, onAccessRecorded, push]);
 
-  return <Action title="Open Folder" icon={Icon.ArrowRight} onAction={handleOpen} />
-})
+  return <Action title="Open Folder" icon={Icon.ArrowRight} onAction={handleOpen} />;
+});
 
 // Add Items action component - memoized for performance
 const AddItemsAction = memo(function AddItemsAction({ folder, onSave }: { folder: Folder; onSave: () => void }) {
@@ -74,18 +89,18 @@ const AddItemsAction = memo(function AddItemsAction({ folder, onSave }: { folder
       shortcut={{ modifiers: ["cmd"], key: "n" }}
       target={<AddItemsForm folder={folder} onSave={onSave} />}
     />
-  )
-})
+  );
+});
 
 export default function FolderContentsView({ folderId, folderName, parentPath }: FolderContentsViewProps) {
   // Build the display path for navigation title
-  const displayPath = parentPath || folderName
+  const displayPath = parentPath || folderName;
 
   // Poll preferences for dynamic updates
-  const prefs = useFolderContentsPreferences()
+  const prefs = useFolderContentsPreferences();
 
-  const { applications, isLoading: isLoadingApps } = useApplicationsData()
-  const { folders: allFolders } = useFoldersData()
+  const { applications, isLoading: isLoadingApps } = useApplicationsData();
+  const { folders: allFolders } = useFoldersData();
 
   const {
     data: folder,
@@ -93,49 +108,49 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
     revalidate,
   } = useCachedPromise(
     async (id: string) => {
-      const loaded = await getFolderById(id)
-      if (loaded) await recordFolderAccess(id)
-      return loaded
+      const loaded = await getFolderById(id);
+      if (loaded) await recordFolderAccess(id);
+      return loaded;
     },
     [folderId],
     {
       keepPreviousData: true,
       failureToastOptions: { title: "Failed to load folder" },
-    }
-  )
+    },
+  );
 
-  const isLoading = isLoadingFolder || isLoadingApps
+  const isLoading = isLoadingFolder || isLoadingApps;
 
   const sortedItems = useMemo(() => {
-    if (!folder) return []
+    if (!folder) return [];
     return sortFolderItems(
       folder.items,
       prefs.folderContentsSortPrimary || "alphabetical-asc",
       prefs.folderContentsSortSecondary || "none",
       prefs.folderContentsSortTertiary || "none",
-      applications
-    )
+      applications,
+    );
   }, [
     folder,
     applications,
     prefs.folderContentsSortPrimary,
     prefs.folderContentsSortSecondary,
     prefs.folderContentsSortTertiary,
-  ])
+  ]);
 
-  const viewType = prefs.folderContentsViewType || "list"
-  const showPreviewPane = prefs.showPreviewPane ?? false
+  const viewType = prefs.folderContentsViewType || "list";
+  const showPreviewPane = prefs.showPreviewPane ?? false;
 
   // Render detail for items when preview pane is enabled
   const renderItemDetail = useCallback(
     (item: FolderItem) => {
-      if (!showPreviewPane) return undefined
+      if (!showPreviewPane) return undefined;
 
       // For nested folders, show their contents
       if (item.type === "folder" && item.folderId) {
-        const nestedFolder = allFolders.find((f) => f.id === item.folderId)
+        const nestedFolder = allFolders.find((f) => f.id === item.folderId);
         if (nestedFolder) {
-          return <FolderPreviewDetail folder={nestedFolder} applications={applications} allFolders={allFolders} />
+          return <FolderPreviewDetail folder={nestedFolder} applications={applications} allFolders={allFolders} />;
         }
       }
 
@@ -154,7 +169,7 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
               </List.Item.Detail.Metadata>
             }
           />
-        )
+        );
       }
 
       // For websites, show URL and title
@@ -169,24 +184,24 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
               </List.Item.Detail.Metadata>
             }
           />
-        )
+        );
       }
 
-      return undefined
+      return undefined;
     },
-    [showPreviewPane, allFolders, applications]
-  )
+    [showPreviewPane, allFolders, applications],
+  );
 
   const handleSave = useCallback(async () => {
-    invalidateFoldersCache()
-    await revalidate()
-  }, [revalidate])
+    invalidateFoldersCache();
+    await revalidate();
+  }, [revalidate]);
 
   const handleRemoveItem = useCallback(
     async (item: FolderItem) => {
-      if (!folder) return
+      if (!folder) return;
 
-      const itemName = getItemDisplayName(item, applications, allFolders)
+      const itemName = getItemDisplayName(item, applications, allFolders);
 
       const confirmed = await confirmAlert({
         title: "Remove Item",
@@ -195,33 +210,37 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
           title: "Remove",
           style: Alert.ActionStyle.Destructive,
         },
-      })
+      });
 
-      if (!confirmed) return
+      if (!confirmed) return;
 
-      const updatedItems = folder.items.filter((i) => i.id !== item.id)
-      await updateFolder(folderId, { items: updatedItems })
+      const updatedItems = folder.items.filter((i) => i.id !== item.id);
+      await updateFolder(folderId, { items: updatedItems });
 
-      await toastSuccess("Removed", `${itemName} removed from ${folderName}`)
+      await showToast({
+        title: "Removed",
+        message: `${itemName} removed from ${folderName}`,
+        style: Toast.Style.Success,
+      });
 
-      await handleSave()
+      await handleSave();
     },
-    [folder, folderId, folderName, applications, allFolders, handleSave]
-  )
+    [folder, folderId, folderName, applications, allFolders, handleSave],
+  );
 
   // Find duplicate items in the folder (same URL for websites, same path for apps)
   const duplicateInfo = useMemo(
     () => (folder ? findDuplicateItems(folder.items) : { hasDuplicates: false, duplicateCount: 0, uniqueItems: [] }),
-    [folder]
-  )
+    [folder],
+  );
 
   const handleRemoveDuplicates = useCallback(async () => {
     if (!folder || !duplicateInfo.hasDuplicates) {
-      await toastSuccess("No duplicates found")
-      return
+      await showToast({ title: "No duplicates found", style: Toast.Style.Success });
+      return;
     }
 
-    const { duplicateCount, uniqueItems } = duplicateInfo
+    const { duplicateCount, uniqueItems } = duplicateInfo;
 
     const confirmed = await confirmAlert({
       title: "Remove Duplicates",
@@ -230,80 +249,104 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
         title: "Remove Duplicates",
         style: Alert.ActionStyle.Destructive,
       },
-    })
+    });
 
-    if (!confirmed) return
+    if (!confirmed) return;
 
-    await updateFolder(folderId, { items: uniqueItems })
+    await updateFolder(folderId, { items: uniqueItems });
 
-    await toastSuccess("Duplicates removed", `Removed ${duplicateCount} ${pluralize(duplicateCount, "item")}`)
+    await showToast({
+      title: "Duplicates removed",
+      message: `Removed ${duplicateCount} ${pluralize(duplicateCount, "item")}`,
+      style: Toast.Style.Success,
+    });
 
-    await handleSave()
-  }, [folder, folderId, folderName, duplicateInfo, handleSave])
+    await handleSave();
+  }, [folder, folderId, folderName, duplicateInfo, handleSave]);
 
   const handleDuplicateItem = useCallback(
     async (item: FolderItem) => {
-      if (!folder) return
+      if (!folder) return;
 
-      const itemName = getItemDisplayName(item, applications, allFolders)
+      const itemName = getItemDisplayName(item, applications, allFolders);
 
       // Create a copy of the item with a new ID
       const newItem: FolderItem = {
         ...item,
         id: generateId(),
-      }
+      };
 
       await updateFolder(folderId, {
         items: [...folder.items, newItem],
-      })
+      });
 
-      await toastSuccess("Item duplicated", `"${itemName}" duplicated`)
+      await showToast({
+        title: "Item duplicated",
+        message: `"${itemName}" duplicated`,
+        style: Toast.Style.Success,
+      });
 
-      await handleSave()
+      await handleSave();
     },
-    [folder, folderId, applications, allFolders, handleSave]
-  )
+    [folder, folderId, applications, allFolders, handleSave],
+  );
 
   const handleRefreshFavicon = useCallback(
     async (item: FolderItem) => {
-      if (!folder || item.type !== "website" || !item.url) return
+      if (!folder || item.type !== "website" || !item.url) return;
 
-      await toastLoading("Refreshing favicon...")
+      await showToast({ title: "Refreshing favicon...", style: Toast.Style.Animated });
 
       // Force re-fetch, bypassing cache
-      const newIconPath = await fetchAndCacheFavicon(item.url, true)
+      const newIconPath = await fetchAndCacheFavicon(item.url, true);
 
       // Update the item with the new icon path
-      const updatedItems = folder.items.map((i) => (i.id === item.id ? { ...i, icon: newIconPath } : i))
+      const updatedItems = folder.items.map((i) => (i.id === item.id ? { ...i, icon: newIconPath } : i));
 
-      await updateFolder(folderId, { items: updatedItems })
+      await updateFolder(folderId, { items: updatedItems });
 
-      await toastSuccess(newIconPath ? "Favicon refreshed" : "No favicon found", item.name)
+      await showToast({
+        title: newIconPath ? "Favicon refreshed" : "No favicon found",
+        message: item.name,
+        style: Toast.Style.Success,
+      });
 
-      await handleSave()
+      await handleSave();
     },
-    [folder, folderId, handleSave]
-  )
+    [folder, folderId, handleSave],
+  );
 
   const handleOpenItem = useCallback(
     async (item: FolderItem) => {
       try {
-        await recordItemAccess(folderId, item.id)
-        revalidate()
+        await recordItemAccess(folderId, item.id);
+        revalidate();
 
         if (item.type === "application" && item.path) {
-          await open(item.path)
-          await toastSuccess("Opened", getItemDisplayName(item, applications, allFolders))
+          await open(item.path);
+          await showToast({
+            title: "Opened",
+            message: getItemDisplayName(item, applications, allFolders),
+            style: Toast.Style.Success,
+          });
         } else if (item.type === "website" && item.url) {
-          await open(item.url)
-          await toastSuccess("Opened", getItemDisplayName(item, applications, allFolders))
+          await open(item.url);
+          await showToast({
+            title: "Opened",
+            message: getItemDisplayName(item, applications, allFolders),
+            style: Toast.Style.Success,
+          });
         }
       } catch (error) {
-        await toastFailure("Failed to open", error instanceof Error ? error.message : "Unknown error")
+        await showToast({
+          title: "Failed to open",
+          message: error instanceof Error ? error.message : "Unknown error",
+          style: Toast.Style.Failure,
+        });
       }
     },
-    [folderId, applications, revalidate]
-  )
+    [folderId, applications, revalidate],
+  );
 
   // Get items by type once (memoized) - used for bulk actions and section rendering
   const { appItemsList, websiteItemsList } = useMemo(
@@ -311,29 +354,29 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
       appItemsList: folder ? filterApplications(folder.items) : [],
       websiteItemsList: folder ? filterWebsites(folder.items) : [],
     }),
-    [folder]
-  )
+    [folder],
+  );
 
-  const hasApps = appItemsList.length > 0
-  const hasWebsites = websiteItemsList.length > 0
+  const hasApps = appItemsList.length > 0;
+  const hasWebsites = websiteItemsList.length > 0;
 
   const handleOpenAllApps = useCallback(
     () => openAllApplications(appItemsList, folderName, applications),
-    [appItemsList, folderName, applications]
-  )
+    [appItemsList, folderName, applications],
+  );
 
   const handleOpenAllWeb = useCallback(
     () => openAllWebsites(websiteItemsList, folderName),
-    [websiteItemsList, folderName]
-  )
+    [websiteItemsList, folderName],
+  );
 
   // URL copying functionality (reusable hook)
-  const { hasUrls, copyAsMarkdown, copyAsList } = useCopyUrls(folder, allFolders)
+  const { hasUrls, copyAsMarkdown, copyAsList } = useCopyUrls(folder, allFolders);
 
   // Track running applications
-  const { hasRunningApps, quitAllRunningApps } = useRunningApps(appItemsList, applications)
+  const { hasRunningApps, quitAllRunningApps } = useRunningApps(appItemsList, applications);
 
-  const handleQuitAllApplications = useCallback(() => quitAllRunningApps(folderName), [quitAllRunningApps, folderName])
+  const handleQuitAllApplications = useCallback(() => quitAllRunningApps(folderName), [quitAllRunningApps, folderName]);
 
   const renderActions = useCallback(
     (item: FolderItem) => (
@@ -429,7 +472,7 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
           {item.type === "folder" &&
             item.folderId &&
             (() => {
-              const nestedFolder = allFolders.find((f) => f.id === item.folderId)
+              const nestedFolder = allFolders.find((f) => f.id === item.folderId);
               return nestedFolder ? (
                 <Action.Push
                   title="Edit Folder"
@@ -439,7 +482,7 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
                     <FolderEditForm folder={nestedFolder} onSave={handleSave} navigateToFolderAfterSave={false} />
                   }
                 />
-              ) : null
+              ) : null;
             })()}
           <Action
             title="Duplicate Item"
@@ -499,8 +542,8 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
       copyAsList,
       hasRunningApps,
       handleQuitAllApplications,
-    ]
-  )
+    ],
+  );
 
   // Separate sorted items by type (memoized for performance)
   const { appItems, websiteItems, nestedFolderItems } = useMemo(
@@ -509,24 +552,24 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
       websiteItems: sortedItems.filter((item) => item.type === "website"),
       nestedFolderItems: sortedItems.filter((item) => item.type === "folder"),
     }),
-    [sortedItems]
-  )
+    [sortedItems],
+  );
 
-  const separateSections = prefs.gridSeparateSections ?? true
+  const separateSections = prefs.gridSeparateSections ?? true;
 
   if (!folder) {
     return (
       <List isLoading={isLoading}>
         <List.EmptyView {...FOLDER_NOT_FOUND_VIEW} />
       </List>
-    )
+    );
   }
 
   const commonProps = {
     isLoading,
     navigationTitle: displayPath,
     searchBarPlaceholder: "Search items...",
-  }
+  };
 
   if (viewType === "grid") {
     return (
@@ -605,7 +648,7 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
           ))
         )}
       </Grid>
-    )
+    );
   }
 
   return (
@@ -694,5 +737,5 @@ export default function FolderContentsView({ folderId, folderName, parentPath }:
         ))
       )}
     </List>
-  )
+  );
 }
